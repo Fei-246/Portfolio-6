@@ -1,0 +1,164 @@
+---
+title: "Portfolio-6"
+author: "Fei Xie"
+date: "5/11/2021"
+output: html_document
+---
+
+#Does more forest make countries care more about CO2 emission?
+
+It's natural that people live on water from a river will care more about the water quality. So, does more forest lead to more care about protecting the environment, namely the CO2 emission? Or, does the high CO2 emission makes countries aware that they need more forest?
+In this portfolio, I used data from GapMinder to investigate this question and other questions about the world-wide Co2 emission.
+
+
+### Load packages and data
+
+```{r load-packages, message=FALSE}
+library(tidyverse) 
+library(dplyr)
+library(rworldmap)
+```
+
+```{r load-data, message=FALSE}
+CO2 <- read_csv("data/co2_emissions_tonnes_per_person.csv", na = c("",".","NA"))
+Forest <- read_csv("data/forest_land_total_area_ha.csv", na = c("",".","NA"))
+```
+
+### Kowning the datasets
+```{r explore-CO2}
+glimpse(CO2)
+CO2 %>%
+  count(country)
+```
+The "CO2" dataset contains 192 rows and 220 columns, which includes 192 countries' available data from 1800 to 2018.
+
+
+```{r explore-forest}
+glimpse(Forest)
+Forest %>%
+  count(country)
+```
+
+The "Forest" dataset also contains 192 rows but 27 columns, which includes 192 countries' available data from 1990 to 2015. This tells us that if we want to analyze the relationship between forest land and CO2 emission, the cases should be between 1990 and 2015.
+
+### who released the most CO2/person in 2018? Who does the least?
+
+```{r 2015_CO2_barplot}
+barplotCountryData(CO2,
+                   nameColumnToPlot = "2018",
+                   nameCountryColumn = "country",
+                   title = "the 2018 ranking of the Co2 emission in each country")
+
+```
+From the barplot, we can see that the country released the most Co2 per person in 2018 is Qatar, and Congo Dem. Rep released the least CO2.
+
+### World map about the CO2 emission in 1990 and 2015.
+```{r 1990_CO2_map}
+
+sPDF <- joinCountryData2Map(CO2,
+                            #use country name instead of country code to join data
+                            joinCode="NAME"
+              , nameJoinColumn = "country")
+
+mapCountryData( sPDF
+              , nameColumnToPlot="1990" ,
+              catMethod="pretty",
+              colourPalette='heat',addLegend='TRUE',
+              mapTitle= "World map about the CO2 emission in 1990",
+                missingCountryCol = gray(.8)
+              )
+```
+
+```{r 2015_CO2_map}
+
+sPDF <- joinCountryData2Map(CO2,
+                            #use country name instead of country code to join data
+                            joinCode="NAME"
+              , nameJoinColumn = "country")
+
+mapCountryData( sPDF
+              , nameColumnToPlot="2015" ,
+              catMethod="pretty",
+              colourPalette='heat',addLegend='TRUE',
+              mapTitle= "World map about the CO2 emission in 2015",
+                missingCountryCol = gray(.8)
+              )
+```
+From the world map, we know that North America and Australia may be the continents that released the most CO2 per person in 1990. Europe lies in the middle, and Africa and South America goes to the end. And this situation keeps till 2015, excepting that Asia caught up with Europe.
+
+### World map about the forest land in 1990 and 2015.
+```{r 1990_forest_map}
+
+sPDF <- joinCountryData2Map(Forest,
+                            #use country name instead of country code to join data
+                            joinCode="NAME"
+              , nameJoinColumn = "country")
+
+mapCountryData( sPDF
+              , nameColumnToPlot="1990" ,
+              catMethod="pretty",
+              colourPalette='topo',addLegend='TRUE',
+              mapTitle= "World map about the CO2 emission in 1990",
+                missingCountryCol = gray(.8)
+              )
+
+```
+
+```{r 2015_forest_map}
+
+sPDF <- joinCountryData2Map(Forest,
+                            #use country name instead of country code to join data
+                            joinCode="NAME"
+              , nameJoinColumn = "country")
+
+mapCountryData( sPDF
+              , nameColumnToPlot="2015" ,
+              catMethod="pretty",
+              colourPalette='topo',addLegend='TRUE',
+              mapTitle= "World map about the CO2 emission in 2015",
+              missingCountryCol = gray(.8)
+              )
+
+  
+```
+
+From the world map, we know that we missed many countries in 1990 but have more data in 2015. Russia and North America have the most forest land. North America, Australia, and China follow. Europe and Africa goes to the end. And this situation keeps till 2015.
+
+### Forest and CO2 Emission
+
+```{r combine-data}
+#Forest 1990.x-2015.x, CO2 1990.y-2015.y
+combined <- inner_join(Forest, CO2, by = "country")
+#rename 1990 and 2015 data
+combined <- combined %>%
+  rename(
+   "forest1990" = "1990.x",
+   "Co1990" = "1990.y",
+   "forest2015" = "2015.x",
+   "Co2015" = "2015.y",
+  )
+```
+
+```{r forest-CO2-plot}
+ggplot(combined,
+       aes(x = forest1990,
+           y = Co2015)) +
+  geom_point()+
+  geom_smooth(method = "lm", fullrange = TRUE)+
+  labs(
+    title = "Forest land in 1990 predicts CO2 emission in 2015? "
+  )
+```
+
+```{r CO2-forest-plot}
+ggplot(combined,
+       aes(x = Co1990,
+           y = forest2015)) +
+  geom_point()+
+  geom_smooth(method = "lm", fullrange = TRUE)+
+  labs(
+    title = "Does CO2 emission in 1990 predict forest land in 2015? "
+  )
+```
+
+From the plot, we can see a upward line indicating positive associations between forest land and CO2. That is, countries released more CO2 in 1990 tend to have more forest in 2015, and countries have more forest in 1990 now release more CO2. This result could be biased because it's highly influenced by a few outliers.
